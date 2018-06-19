@@ -2,6 +2,8 @@
 
 ## Introduction
 The EigenPro2 is proposed to achieve very fast, scalable, and accurate training for kernel machines.
+A detailed description of the method can be found in paper -
+["Learning kernels that adapt to GPU"](https://arxiv.org/abs/1806.06144).
 
 ## Requirements: Tensorflow (>=1.2.1) and Keras (=2.0.8)
 ```
