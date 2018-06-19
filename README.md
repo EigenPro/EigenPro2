@@ -1,4 +1,4 @@
-# EigenPro2 Iteration
+# EigenPro2
 
 ## Introduction
 The EigenPro2 is proposed to achieve very fast, scalable, and accurate training for kernel machines.
