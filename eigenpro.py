@@ -32,20 +32,27 @@ def pre_eigenpro_f(feat, phi, k, n, mG, alpha=.9, seed=1):
         f:      tensor function.
         scale:  factor that rescales step size.
         s1:     largest eigenvalue.
-        delta:  amount of trace decrease.
+        beta:   largest k(x, x) for the EigenPro kernel.
     """
 
     np.random.seed(seed) # set random seed for subsamples
     start = time.time()
+    n_sample, d = feat.shape
 
-    _s, _V = nystrom_kernel_svd(feat, phi, n, k)
+    if k is None:
+        svd_k = min(n_sample - 1, 1000)
+    else:
+        svd_k = k
+
+    _s, _V = nystrom_kernel_svd(feat, phi, n, svd_k)
 
     # Choose k such that the batch size is bounded by
     #   the subsample size and the memory size.
-    n_sample, d = feat.shape
-    k = np.sum(n / _s < min(n_sample, mG)) - 1 
+    #   Keep the original k if it is pre-specified.
+    if k is None:
+        k = np.sum(n / _s < min(n_sample, mG)) - 1
 
-    _s, _sk, _V = _s[:k], _s[k], _V[:, :k]
+    _s, _sk, _V = _s[:k-1], _s[k-1], _V[:, :k-1]
 
     s = K.constant(_s)
     V = utils.loadvar_in_sess(_V.astype('float32'))
@@ -57,12 +64,12 @@ def pre_eigenpro_f(feat, phi, k, n, mG, alpha=.9, seed=1):
         V * D, K.transpose(K.dot(K.dot(K.transpose(g), kfeat), V)))
     s1 = _s[0] / n
     print("SVD time: %.2f, adjusted k: %d, s1: %.2f, new s1: %.2e" %
-          (time.time() - start, k + 1, _s[0] / n, s1 / scale))
+          (time.time() - start, k, _s[0] / n, s1 / scale))
 
     kxx = 1 - np.sum(_V ** 2, axis=1) / n * feat.shape[0]
-    delta = 1 - np.max(kxx)
+    beta = np.max(kxx)
 
-    return pre_f, scale, s1, delta
+    return pre_f, scale, s1, beta
 
 
 def asm_eigenpro_f(pre_f, kfeat, inx):
@@ -139,9 +146,6 @@ class EigenPro(object):
             else:
                 n_subsample = 10000
 
-        if k is None:
-            k = min(n_subsample - 1, 1000)
-
         mem_bytes = mem_gb * 1024**3 - 100 * 1024**2 # preserve 100MB
         # Has a factor 3 due to tensorflow implementation.
         mem_usages = (d + n_label + 3 * np.arange(n_subsample)) * n * 4
@@ -150,13 +154,12 @@ class EigenPro(object):
         # Calculate batch/step size for improved EigenPro iteration.
         np.random.seed(seed)
         pinx = np.random.choice(n, n_subsample, replace=False).astype('int32')
-        kf, gap, s1, delta = pre_eigenpro_f(
+        kf, gap, s1, beta = pre_eigenpro_f(
             centers[pinx], kernel, k, n, mG, alpha=.95, seed=seed)
-        beta = 1. - delta
         new_s1 = s1 / gap
 
         if bs is None:
-        	bs = np.int32(beta / new_s1 + 1)
+            bs = min(np.int32(beta / new_s1 + 1), mG)
 
         if bs < beta / new_s1 + 1:
         	eta = bs / beta
@@ -166,8 +169,8 @@ class EigenPro(object):
         	eta = 0.95 * 2 / new_s1
         eta = .5 * eta # .5 for constant related to mse loss.
 
-        print("n_subsample=%d, mG=%d, eta=%.2f, bs=%d, s1=%.2e, delta=%.2f" %
-              (n_subsample, mG, eta, bs, s1, delta))
+        print("n_subsample=%d, mG=%d, eta=%.2f, bs=%d, s1=%.2e, beta=%.2f" %
+              (n_subsample, mG, eta, bs, s1, beta))
         eta = np.float32(eta * n_label) 
         
         # Assemble kernel model.

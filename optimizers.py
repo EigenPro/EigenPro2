@@ -27,7 +27,7 @@ def nesterov(p0, p1, rmax=.95):
 
 
 class PSGD(Optimizer):
-    """Primal Stochastic gradient descent optimizer.
+    """Primal stochastic gradient descent optimizer.
 
     Arguments:
         pred_t: tensor. Prediction result.
