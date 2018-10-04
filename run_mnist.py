@@ -44,8 +44,8 @@ parser.add_argument('-mem_gb', '--mem_gb', type=np.float32, help="bandwidth", re
 parser.add_argument('-epochs', '--epochs', nargs='+', type=int,
                     help="epochs to calculate errors, e.g., --epochs 1 2 3 4 5", required=True)
 
-parser.add_argument('-k', '--k', type=np.int32, default=None,
-                    help="using the top-k eigensystem for the eigenpro iteration/kernel")
+parser.add_argument('-q', '--q', type=np.int32, default=None,
+                    help="using the top-1 eigensystem for the eigenpro iteration/kernel")
 parser.add_argument('-bs', '--bs', type=np.int32, default=None,
                     help="size of mini-batch")
 parser.add_argument('-n_subsample', '--n_subsample', type=np.int32, default=None,
@@ -83,7 +83,7 @@ else:
 model = EigenPro(kernel, x_train, n_class,
                  mem_gb=args_dict['mem_gb'],
                  n_subsample=args_dict['n_subsample'],
-                 k=args_dict['k'],
+                 q=args_dict['q'],
                  bs=args_dict['bs'])
 model.fit(x_train, y_train,
           x_val=x_test, y_val=y_test,
