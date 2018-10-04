@@ -45,7 +45,7 @@ parser.add_argument('-epochs', '--epochs', nargs='+', type=int,
                     help="epochs to calculate errors, e.g., --epochs 1 2 3 4 5", required=True)
 
 parser.add_argument('-q', '--q', type=np.int32, default=None,
-                    help="using the top-1 eigensystem for the eigenpro iteration/kernel")
+                    help="using the top-q eigensystem for the eigenpro iteration/kernel")
 parser.add_argument('-bs', '--bs', type=np.int32, default=None,
                     help="size of mini-batch")
 parser.add_argument('-n_subsample', '--n_subsample', type=np.int32, default=None,
